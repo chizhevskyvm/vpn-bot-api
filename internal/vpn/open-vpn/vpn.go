@@ -87,7 +87,5 @@ func (s *Vpn) AddVPNClient(ctx context.Context, name string) (string, error) {
 		return "", fmt.Errorf("failed to render template: %w", err)
 	}
 
-	fmt.Println(buf.String())
-
 	return buf.String(), nil
 }
