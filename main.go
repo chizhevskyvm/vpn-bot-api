@@ -14,7 +14,7 @@ func main() {
 	defer cancel()
 
 	go func() {
-		fmt.Println("🤖 Bot is running. Press CTRL+C to stop.")
+		fmt.Println("🖥️ Service is running. Press CTRL+C to stop.")
 
 		err := cmd.RunBot(ctx)
 		if err != nil {

@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"context"
-	"github.com/go-telegram/bot"
+	"fmt"
 	"log"
 	"os"
-	"vpn-bot-api/internal/input/telegram"
 
+	"github.com/go-telegram/bot"
 	"gopkg.in/yaml.v3"
 	"vpn-bot-api/config"
+	"vpn-bot-api/internal/input/telegram"
 	"vpn-bot-api/internal/ssh"
 	openvpn "vpn-bot-api/internal/vpn/open-vpn"
 )
@@ -16,40 +17,46 @@ import (
 const configPath = "./conf.yaml"
 
 func RunBot(ctx context.Context) error {
-	cfg := GetConfig()
+	cfg, err := LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
 
 	sshClient, err := ssh.NewSsh(cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to init ssh client: %w", err)
 	}
 
 	openVpn, err := openvpn.NewVpn(cfg, sshClient)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to init openvpn: %w", err)
 	}
 
 	b, err := bot.New(cfg.Telegram.Token)
 	if err != nil {
-		log.Fatalf("Error create telegram bot: %v", err)
+		return fmt.Errorf("failed to create telegram bot: %w", err)
 	}
 
-	err = telegram.RegisterHandlers(ctx, b, openVpn)
-	if err != nil {
-		log.Fatalf("Error register telegram handler: %v", err)
+	if err := telegram.RegisterHandlers(ctx, b, openVpn); err != nil {
+		return fmt.Errorf("failed to register telegram handlers: %w", err)
 	}
 
-	go b.Start(ctx)
+	log.Println("🤖 Bot is starting...")
+	b.Start(ctx)
+	log.Println("✅ Bot stopped")
 
 	return nil
 }
 
-func GetConfig() *config.Config {
+func LoadConfig() (*config.Config, error) {
 	data, _ := os.ReadFile(configPath)
 
 	var cfg config.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		log.Fatal(err)
+
+		return nil, err
 	}
 
-	return &cfg
+	return &cfg, nil
 }
